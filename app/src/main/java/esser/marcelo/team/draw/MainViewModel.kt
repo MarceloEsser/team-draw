@@ -23,14 +23,14 @@ class MainViewModel @Inject constructor(
     val selectedSoccer: State<Soccer?>
         get() = _selectedSoccer
 
-    private var _soccers: SnapshotStateList<Soccer> = mutableStateListOf()
-    var soccers: SnapshotStateList<Soccer>
+    private var _soccerPlayers: SnapshotStateList<Soccer> = mutableStateListOf()
+    var soccerPlayers: SnapshotStateList<Soccer>
         get() {
             fetchPlayers()
-            return _soccers
+            return _soccerPlayers
         }
         set(value) {
-            _soccers = value
+            _soccerPlayers = value
         }
 
     private var _teams: SnapshotStateList<List<Soccer>> = mutableStateListOf()
@@ -51,7 +51,7 @@ class MainViewModel @Inject constructor(
     }
 
     fun drawTeams() {
-        val players = _soccers
+        val players = _soccerPlayers
         val numberOfTeams = players.filter { it.isPlaying }.size / 5
         for (i in 0 until numberOfTeams) {
             _teams.add(players.shuffled().take(5))
@@ -62,8 +62,8 @@ class MainViewModel @Inject constructor(
     private fun fetchPlayers() {
         viewModelScope.launch {
             repository.getAll().collect { entities ->
-                _soccers.clear()
-                _soccers.addAll(entities)
+                _soccerPlayers.clear()
+                _soccerPlayers.addAll(entities)
             }
         }
     }
@@ -82,8 +82,8 @@ class MainViewModel @Inject constructor(
     }
 
     fun changeSoccerStatus(id: Long?) {
-        val index = _soccers.indexOfFirst { it.id == id }
-        val player = _soccers[index]
-        _soccers[index] = player.copy(isPlaying = player.isPlaying.not())
+        val index = _soccerPlayers.indexOfFirst { it.id == id }
+        val player = _soccerPlayers[index]
+        _soccerPlayers[index] = player.copy(isPlaying = player.isPlaying.not())
     }
 }

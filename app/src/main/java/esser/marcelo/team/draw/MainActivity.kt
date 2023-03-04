@@ -6,14 +6,13 @@
 package esser.marcelo.team.draw
 
 import android.os.Bundle
+import android.widget.RatingBar
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.animation.animateColor
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -34,9 +33,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -134,62 +131,90 @@ fun Child(
         },
     ) { scaffoldPadding ->
         Box(modifier = Modifier.padding(scaffoldPadding)) {
-            val mPlayers = remember { viewModel.soccers }
+            val soccerPlayers = remember { viewModel.soccerPlayers }
 
             LazyColumn {
-                items(items = mPlayers, key = { it.hashCode() }) { soccer ->
-                    val selectedSoccer = remember { viewModel.selectedSoccer }
+                items(items = soccerPlayers, key = { it.hashCode() }) { player ->
+                    val dismissState = rememberDismissState()
 
-                    val transition = updateTransition(selectedSoccer, label = "")
-                    val elevation by transition.animateDp(label = "") {
-                        if (it.value != null) 6.dp else 0.dp
-                    }
-                    val color by transition.animateColor(label = "") {
-                        if (it.value != null) MaterialTheme.colorScheme.primary else Color.Transparent
+                    if (dismissState.isDismissed(DismissDirection.EndToStart)) {
+                        viewModel.deletePlayer(player)
                     }
 
-                    Surface(
-                        shadowElevation = elevation,
-                        tonalElevation = elevation,
-                        shape = MaterialTheme.shapes.medium,
-                        color = color,
-                        modifier = Modifier
-                            .background(color = MaterialTheme.colorScheme.background)
-                            .shadow(elevation, ambientColor = MaterialTheme.colorScheme.secondary)
-                    ) {
-                        ListItem(
-                            modifier = Modifier.combinedClickable(
-                                onClick = {
-                                    viewModel.changeSoccerStatus(soccer.id)
-                                },
-                                onLongClick = {
-                                    viewModel.setSelectedSoccer(soccer)
-                                },
-                            ),
-                            text = { Text(text = soccer.name) },
-                            icon = {
-                                val scale by animateFloatAsState(
-                                    animationSpec = tween(1000),
-                                    targetValue = if (!soccer.isPlaying) 0f else 1f
-                                )
+                    SwipeToDismiss(
+                        directions = setOf(
+                            DismissDirection.EndToStart
+                        ),
+                        state = dismissState,
+                        background = {
+                            val mColor by animateColorAsState(
+                                if (dismissState.targetValue != DismissValue.Default) MaterialTheme.colorScheme.error
+                                else Color.Transparent
+                            )
 
+                            val scale by animateFloatAsState(
+                                if (dismissState.targetValue == DismissValue.Default) 0.65f else 1.1f
+                            )
+
+                            Box(
+                                Modifier
+                                    .fillMaxSize()
+                                    .background(mColor)
+                                    .padding(horizontal = Dp(20f)),
+                                contentAlignment = Alignment.CenterEnd
+                            ) {
                                 Icon(
-                                    Icons.Filled.CheckCircle,
-                                    contentDescription = "player gonna play",
+                                    Icons.Default.Delete,
+                                    contentDescription = "Delete Icon",
                                     modifier = Modifier.scale(scale)
                                 )
+                            }
+                        },
+                        dismissContent = {
+                            val transition = updateTransition(dismissState, label = "")
+                            val elevation by transition.animateDp(label = "") {
+                                if (it.targetValue == DismissValue.Default) 0.dp else 6.dp
+                            }
 
-                            },
-                            trailing = {
-                                if (soccer.isFatDude) {
-                                    Icon(
-                                        Icons.Filled.Face,
-                                        contentDescription = "Delete player"
+                            Surface(
+                                shadowElevation = elevation,
+                                tonalElevation = elevation,
+                                onClick = {
+                                    viewModel.changeSoccerStatus(player.id)
+                                },
+                            ) {
+                                if (player.id != soccerPlayers.first().id) {
+                                    Divider(
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
                                     )
                                 }
+
+                                ListItem(
+                                    text = { Text(text = player.name) },
+                                    icon = {
+                                        if(player.isPlaying) {
+                                            Icon(
+                                                Icons.Filled.CheckCircle,
+                                                contentDescription = "Delete player"
+                                            )
+                                        }
+
+                                    },
+                                    trailing = {
+                                        if (player.isFatDude) {
+                                            Icon(
+                                                Icons.Filled.Face,
+                                                contentDescription = "Delete player"
+                                            )
+                                        }
+                                    }
+                                )
+
                             }
-                        )
-                    }
+                        }
+                    )
+
+
                 }
             }
         }
