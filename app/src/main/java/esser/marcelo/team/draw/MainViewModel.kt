@@ -1,6 +1,7 @@
 package esser.marcelo.team.draw
 
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
@@ -18,7 +19,9 @@ class MainViewModel @Inject constructor(
     @PlayersRepository private val repository: PlayerRepository
 ) : ViewModel() {
 
-    val selectedSoccer: MutableState<Soccer?> = mutableStateOf(null)
+    private val _selectedSoccer: MutableState<Soccer?> = mutableStateOf(null)
+    val selectedSoccer: State<Soccer?>
+        get() = _selectedSoccer
 
     private var _soccers: SnapshotStateList<Soccer> = mutableStateListOf()
     var soccers: SnapshotStateList<Soccer>
@@ -39,6 +42,13 @@ class MainViewModel @Inject constructor(
             _teams = value
         }
 
+    fun setSelectedSoccer(soccer: Soccer?) {
+        if(_selectedSoccer.value?.id == soccer?.id) {
+            _selectedSoccer.value = null
+            return
+        }
+        _selectedSoccer.value = soccer
+    }
 
     fun drawTeams() {
         val players = _soccers

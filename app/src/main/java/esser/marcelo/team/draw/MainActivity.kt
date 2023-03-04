@@ -34,7 +34,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -72,6 +74,7 @@ fun Child(
     var fatDude by remember { mutableStateOf(false) }
     var soccerName by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
+    val scope = rememberCoroutineScope()
 
 
     Scaffold(
@@ -84,7 +87,7 @@ fun Child(
                     viewModel.drawTeams()
                     focusManager.clearFocus()
                     soccerName = ""
-                    lifeCycleOwner.lifecycleScope.launch {
+                    scope.launch {
                         drawerState.animateTo(DrawerValue.Open, TweenSpec(durationMillis = 0))
                     }
                 },
@@ -139,26 +142,30 @@ fun Child(
 
                     val transition = updateTransition(selectedSoccer, label = "")
                     val elevation by transition.animateDp(label = "") {
-                        if (it.value != null) 2.dp else 10.dp
+                        if (it.value != null) 6.dp else 0.dp
+                    }
+                    val color by transition.animateColor(label = "") {
+                        if (it.value != null) MaterialTheme.colorScheme.primary else Color.Transparent
                     }
 
                     Surface(
                         shadowElevation = elevation,
                         tonalElevation = elevation,
                         shape = MaterialTheme.shapes.medium,
-
+                        color = color,
+                        modifier = Modifier
+                            .background(color = MaterialTheme.colorScheme.background)
+                            .shadow(elevation, ambientColor = MaterialTheme.colorScheme.secondary)
                     ) {
                         ListItem(
-                            modifier = Modifier
-                                .background(color = MaterialTheme.colorScheme.background)
-                                .combinedClickable(
-                                    onClick = {
-                                        viewModel.changeSoccerStatus(soccer.id)
-                                    },
-                                    onLongClick = {
-                                        viewModel.selectedSoccer.value = soccer
-                                    }
-                                ),
+                            modifier = Modifier.combinedClickable(
+                                onClick = {
+                                    viewModel.changeSoccerStatus(soccer.id)
+                                },
+                                onLongClick = {
+                                    viewModel.setSelectedSoccer(soccer)
+                                },
+                            ),
                             text = { Text(text = soccer.name) },
                             icon = {
                                 val scale by animateFloatAsState(
