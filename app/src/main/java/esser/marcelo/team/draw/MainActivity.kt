@@ -6,14 +6,15 @@
 package esser.marcelo.team.draw
 
 import android.os.Bundle
-import android.widget.RatingBar
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.TweenSpec
+import androidx.compose.animation.core.animateDp
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -54,9 +55,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             TeamDrawTheme {
                 val drawerState =
-                    androidx.compose.material.rememberDrawerState(androidx.compose.material.DrawerValue.Closed)
-                TeamsModal(lifeCycleOwner = this, drawerState = drawerState)
-                Child(drawerState = drawerState, lifeCycleOwner = this)
+                    androidx.compose.material.rememberDrawerState(DrawerValue.Closed)
+                Child(drawerState = drawerState)
+                TeamsModal(drawerState = drawerState)
             }
         }
     }
@@ -66,7 +67,6 @@ class MainActivity : ComponentActivity() {
 fun Child(
     viewModel: MainViewModel = viewModel(),
     drawerState: androidx.compose.material.DrawerState,
-    lifeCycleOwner: ComponentActivity
 ) {
     var fatDude by remember { mutableStateOf(false) }
     var soccerName by remember { mutableStateOf("") }
@@ -224,13 +224,13 @@ fun Child(
 @Composable
 fun TeamsModal(
     viewModel: MainViewModel = viewModel(),
-    lifeCycleOwner: ComponentActivity,
     drawerState: androidx.compose.material.DrawerState
 ) {
     val drawerContentColor = animateColorAsState(
         targetValue = if (drawerState.isClosed) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.surface
     )
     val teams = remember { viewModel.teams }
+    val scope = rememberCoroutineScope()
 
     ModalDrawer(
         drawerContentColor = drawerContentColor.value,
@@ -254,7 +254,7 @@ fun TeamsModal(
             ) {
                 Text(text = "Times")
                 Button(onClick = {
-                    lifeCycleOwner.lifecycleScope.launch {
+                    scope.launch {
                         drawerState.open()
                     }
 
