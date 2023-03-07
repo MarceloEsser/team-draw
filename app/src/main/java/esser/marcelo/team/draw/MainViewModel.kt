@@ -43,7 +43,7 @@ class MainViewModel @Inject constructor(
         }
 
     fun setSelectedSoccer(soccer: Soccer?) {
-        if(_selectedSoccer.value?.id == soccer?.id) {
+        if (_selectedSoccer.value?.id == soccer?.id) {
             _selectedSoccer.value = null
             return
         }
@@ -51,6 +51,7 @@ class MainViewModel @Inject constructor(
     }
 
     fun drawTeams() {
+        _teams.clear()
         val players = _soccerPlayers
         val numberOfTeams = players.filter { it.isPlaying }.size / 5
         for (i in 0 until numberOfTeams) {
@@ -63,6 +64,9 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             repository.getAll().collect { entities ->
                 _soccerPlayers.clear()
+                entities.forEach { entity ->
+                    entity.isPlaying = true
+                }
                 _soccerPlayers.addAll(entities)
             }
         }

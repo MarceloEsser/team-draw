@@ -18,6 +18,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.DrawerValue
@@ -54,10 +55,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             TeamDrawTheme {
-                val drawerState =
-                    androidx.compose.material.rememberDrawerState(DrawerValue.Closed)
-                Child(drawerState = drawerState)
-                TeamsModal(drawerState = drawerState)
+
+                Child()
+
             }
         }
     }
@@ -66,13 +66,51 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun Child(
     viewModel: MainViewModel = viewModel(),
-    drawerState: androidx.compose.material.DrawerState,
 ) {
     var fatDude by remember { mutableStateOf(false) }
     var soccerName by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
-    val scope = rememberCoroutineScope()
+    val openDialog = remember { mutableStateOf(false) }
 
+    if (openDialog.value) {
+        AlertDialog(
+            onDismissRequest = {
+                openDialog.value = false
+            }
+        ) {
+            Surface(
+                shape = MaterialTheme.shapes.large
+            ) {
+                LazyColumn(
+                    modifier = Modifier.padding(
+                        top = 8.dp,
+                        bottom = 16.dp,
+                        start = 8.dp,
+                        end = 8.dp
+                    )
+                ) {
+                    itemsIndexed(items = viewModel.teams) { index, team ->
+                        if (index > 0) {
+                            Divider(
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                            )
+                        }
+                        Text(text = "Time $index", modifier = Modifier.padding(8.dp))
+                        LazyColumn(
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                .height(110.dp)
+                        ) {
+                            items(team, key = { it.hashCode() }) { player ->
+                                Text(text = player.name)
+                            }
+                        }
+                    }
+                }
+
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -84,9 +122,7 @@ fun Child(
                     viewModel.drawTeams()
                     focusManager.clearFocus()
                     soccerName = ""
-                    scope.launch {
-                        drawerState.animateTo(DrawerValue.Open, TweenSpec(durationMillis = 0))
-                    }
+                    openDialog.value = openDialog.value.not()
                 },
                 icon = {
                     Icon(
@@ -132,7 +168,6 @@ fun Child(
     ) { scaffoldPadding ->
         Box(modifier = Modifier.padding(scaffoldPadding)) {
             val soccerPlayers = remember { viewModel.soccerPlayers }
-
             LazyColumn {
                 items(items = soccerPlayers, key = { it.hashCode() }) { player ->
                     val dismissState = rememberDismissState()
@@ -192,7 +227,7 @@ fun Child(
                                 ListItem(
                                     text = { Text(text = player.name) },
                                     icon = {
-                                        if(player.isPlaying) {
+                                        if (player.isPlaying) {
                                             Icon(
                                                 Icons.Filled.CheckCircle,
                                                 contentDescription = "Delete player"
@@ -219,51 +254,6 @@ fun Child(
             }
         }
     }
-}
-
-@Composable
-fun TeamsModal(
-    viewModel: MainViewModel = viewModel(),
-    drawerState: androidx.compose.material.DrawerState
-) {
-    val drawerContentColor = animateColorAsState(
-        targetValue = if (drawerState.isClosed) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.surface
-    )
-    val teams = remember { viewModel.teams }
-    val scope = rememberCoroutineScope()
-
-    ModalDrawer(
-        drawerContentColor = drawerContentColor.value,
-        drawerState = drawerState,
-        drawerContent = {
-            Column {
-                teams.forEach { team ->
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        team.forEach { player ->
-                            Text(text = player.name)
-                        }
-                    }
-                }
-            }
-        },
-        content = {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
-                Text(text = "Times")
-                Button(onClick = {
-                    scope.launch {
-                        drawerState.open()
-                    }
-
-                }) {
-                    Text(text = "Abrir")
-                }
-            }
-        }
-    )
 }
 
 @Preview(
