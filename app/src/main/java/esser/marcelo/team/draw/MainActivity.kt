@@ -1,6 +1,6 @@
 @file:OptIn(
     ExperimentalMaterial3Api::class,
-    ExperimentalMaterialApi::class, ExperimentalFoundationApi::class,
+    ExperimentalMaterialApi::class,
 )
 
 package esser.marcelo.team.draw
@@ -9,11 +9,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.TweenSpec
 import androidx.compose.animation.core.animateDp
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.updateTransition
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,19 +19,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.DrawerValue
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.ListItem
-import androidx.compose.material.ModalDrawer
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Face
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
@@ -43,11 +37,10 @@ import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.lifecycleScope
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dagger.hilt.android.AndroidEntryPoint
 import esser.marcelo.team.draw.ui.theme.TeamDrawTheme
-import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -67,7 +60,7 @@ class MainActivity : ComponentActivity() {
 fun Child(
     viewModel: MainViewModel = viewModel(),
 ) {
-    var fatDude by remember { mutableStateOf(false) }
+    val fatDude by remember { mutableStateOf(false) }
     var soccerName by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
     val openDialog = remember { mutableStateOf(false) }
@@ -101,7 +94,7 @@ fun Child(
                                 .padding(horizontal = 16.dp, vertical = 8.dp)
                                 .height(110.dp)
                         ) {
-                            items(team, key = { it.hashCode() }) { player ->
+                            items(team.players, key = { it.hashCode() }) { player ->
                                 Text(text = player.name)
                             }
                         }
@@ -133,6 +126,9 @@ fun Child(
                 text = { Text("Sortear") })
         },
         bottomBar = {
+            val progress = remember {
+                viewModel.progress
+            }
             BottomAppBar {
                 OutlinedTextField(
                     modifier = Modifier
@@ -150,19 +146,23 @@ fun Child(
                         Text(text = "Nome")
                     },
                     keyboardActions = KeyboardActions(onDone = {
-                        viewModel.addPlayer(soccerName, fatDude)
+                        viewModel.addPlayer(soccerName)
                         soccerName = ""
                     })
                 )
-                Row(modifier = Modifier.padding(horizontal = 8.dp)) {
-                    Text(
-                        text = "Gordão",
-                        Modifier.align(alignment = Alignment.CenterVertically)
-                    )
-                    Checkbox(
-                        checked = fatDude,
-                        onCheckedChange = { checked -> fatDude = checked })
-                }
+
+                Slider(
+                    modifier = Modifier
+                        .padding(start = 8.dp, end = 8.dp, bottom = 10.dp)
+                        .width(225.dp),
+                    value = progress.value,
+                    onValueChange = {
+                        viewModel.progress.value = it
+                    },
+                    steps = 3,
+                    valueRange = 1f..5f,
+                )
+
             }
         },
     ) { scaffoldPadding ->
@@ -236,12 +236,22 @@ fun Child(
 
                                     },
                                     trailing = {
-                                        if (player.isFatDude) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.Center,
+                                            modifier = Modifier.alpha(0.4f).height(16.dp)
+                                        ) {
+                                            Text(
+                                                player.rating.toString(),
+                                                modifier = Modifier.padding(end = 4.dp),
+                                                fontSize = MaterialTheme.typography.labelSmall.fontSize
+                                            )
                                             Icon(
-                                                Icons.Filled.Face,
+                                                Icons.Filled.Star,
                                                 contentDescription = "Delete player"
                                             )
                                         }
+
                                     }
                                 )
 
@@ -264,6 +274,6 @@ fun Child(
 @Composable
 fun DefaultPreview() {
     TeamDrawTheme {
-//        Child()
+        Child()
     }
 }

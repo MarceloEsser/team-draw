@@ -9,19 +9,24 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import esser.marcelo.team.draw.core.model.Soccer
+import esser.marcelo.team.draw.core.model.Team
 import esser.marcelo.team.draw.core.repository.player.PlayerRepository
 import esser.marcelo.team.draw.infra.di.PlayersRepository
 import kotlinx.coroutines.launch
+import java.util.function.Consumer
 import javax.inject.Inject
+
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    @PlayersRepository private val repository: PlayerRepository
+    @PlayersRepository private val repository: PlayerRepository,
 ) : ViewModel() {
 
     private val _selectedSoccer: MutableState<Soccer?> = mutableStateOf(null)
     val selectedSoccer: State<Soccer?>
         get() = _selectedSoccer
+
+    var progress: MutableState<Float> = mutableStateOf(0f)
 
     private var _soccerPlayers: SnapshotStateList<Soccer> = mutableStateListOf()
     var soccerPlayers: SnapshotStateList<Soccer>
@@ -33,8 +38,8 @@ class MainViewModel @Inject constructor(
             _soccerPlayers = value
         }
 
-    private var _teams: SnapshotStateList<List<Soccer>> = mutableStateListOf()
-    var teams: SnapshotStateList<List<Soccer>>
+    private var _teams: SnapshotStateList<Team> = mutableStateListOf()
+    var teams: SnapshotStateList<Team>
         get() {
             return _teams
         }
@@ -50,16 +55,6 @@ class MainViewModel @Inject constructor(
         _selectedSoccer.value = soccer
     }
 
-    fun drawTeams() {
-        _teams.clear()
-        val players = _soccerPlayers
-        val numberOfTeams = players.filter { it.isPlaying }.size / 5
-        for (i in 0 until numberOfTeams) {
-            _teams.add(players.shuffled().take(5))
-        }
-    }
-
-
     private fun fetchPlayers() {
         viewModelScope.launch {
             repository.getAll().collect { entities ->
@@ -72,8 +67,8 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun addPlayer(name: String, isFatDude: Boolean) {
-        val soccer = Soccer(name = name, isFatDude = isFatDude)
+    fun addPlayer(name: String) {
+        val soccer = Soccer(name = name, rating = progress.value.toInt())
         viewModelScope.launch {
             repository.insert(soccer)
         }
@@ -89,5 +84,72 @@ class MainViewModel @Inject constructor(
         val index = _soccerPlayers.indexOfFirst { it.id == id }
         val player = _soccerPlayers[index]
         _soccerPlayers[index] = player.copy(isPlaying = player.isPlaying.not())
+    }
+
+    fun drawTeams() {
+        _teams.clear()
+        val playingPlayers = _soccerPlayers.filter { it.isPlaying }.toMutableList()
+        while (playingPlayers.size >= 5) {
+            val teamPlayers = mutableListOf<Soccer>()
+            var teamPower = 0;
+            for (i in 0..4) {
+                val player = playingPlayers.random()
+                teamPlayers.add(player)
+                teamPower += player.rating
+                playingPlayers.remove(player)
+            }
+            teamPlayers.sortBy { it.rating }
+            _teams.add(Team(power = teamPower, players = ArrayList(teamPlayers)))
+            _teams.sortBy { it.power }
+        }
+        reEquilibrateTeams()
+    }
+
+    private fun reEquilibrateTeams() {
+        if (teams.size < 2) return
+
+        while (teams[_teams.size - 1].power - _teams.first().power >= 4) {
+            val strongestPlayer: Soccer = _teams[_teams.size - 1].players[0]
+            val weakestPlayer: Soccer = _teams[0].players[0]
+            _teams[_teams.size - 1].players.removeAt(0)
+            _teams[_teams.size - 1].power = _teams[_teams.size - 1].power - strongestPlayer.rating
+            _teams[0].players.removeAt(0)
+            _teams[0].power = _teams[0].power - weakestPlayer.rating
+            _teams[_teams.size - 1].players.add(weakestPlayer)
+            _teams[_teams.size - 1].power = _teams[_teams.size - 1].power + weakestPlayer.rating
+            _teams[0].players.add(strongestPlayer)
+            _teams[0].power = _teams[0].power + strongestPlayer.rating
+            _teams.sortedBy { it.power }
+        }
+
+        val randomPositions: MutableList<Int> = ArrayList()
+        while (randomPositions.size < (Math.random() * 4).toInt()) {
+            val randomNumber = (Math.random() * 4).toInt() + 1
+            if (!randomPositions.contains(randomNumber)) {
+                randomPositions.add(randomNumber)
+            }
+        }
+
+        for (randomPosition in randomPositions) {
+            val (_, players) = teams[0]
+            val (_, players1) = teams[1]
+            val firstTeamRandomPLayer = players[randomPosition]
+
+            val secondRandomPlayer = players1.stream()
+                .findFirst()
+                .filter { player: Soccer -> player.rating == firstTeamRandomPLayer.rating }
+
+            secondRandomPlayer.ifPresent { player: Soccer? ->
+                players.remove(firstTeamRandomPLayer)
+                players.add(player!!)
+                players1.remove(player)
+                players1.add(firstTeamRandomPLayer)
+            }
+        }
+
+        teams.sortBy { it.power }
+        teams.forEach { team ->
+            team.players.sortBy { player -> player.rating }
+        }
     }
 }

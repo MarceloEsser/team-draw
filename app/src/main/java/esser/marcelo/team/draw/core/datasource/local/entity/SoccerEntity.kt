@@ -9,11 +9,11 @@ class SoccerEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long? = null,
     val name: String,
-    val isFatDude: Boolean
+    val rating: Int = 0
 )
 
 fun SoccerEntity.toModel(): Soccer {
     return Soccer(
-        id, name, isFatDude
+        id, name, rating
     )
 }
